@@ -1,0 +1,14 @@
+The character sprite is a modified version of a spritesheet found at OpenGameArt.org:
+
+https://opengameart.org/content/2d-rpg-character-walk-spritesheet
+
+Other visuals are created with Krita:
+
+https://github.com/KDE/krita
+
+The `level.map` file consists of hexadecimal values referring to the index of the tiles in `environment.png`
+
+00 01 02 03
+04 05 06 07
+08 09 0a 0b
+0c 0d 0e 0f
