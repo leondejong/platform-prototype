@@ -7,7 +7,7 @@ use super::data::Sprite;
 use super::state::State;
 
 // Update state
-pub fn update(state: &mut State, time: f32, delta: f32, fps: f32) {
+pub fn update_state(state: &mut State, time: f32, delta: f32, fps: f32) {
     state.conf.time = time;
     state.conf.delta = delta;
     state.conf.fps = fps;
@@ -18,65 +18,21 @@ pub fn update(state: &mut State, time: f32, delta: f32, fps: f32) {
 
     state.conf.accumulator += state.conf.delta;
 
-    direction(state);
+    update_direction(state);
 
     // Timestepping
     while state.conf.accumulator > state.conf.step {
         state.conf.accumulator -= state.conf.step;
-        physics(state); // Linear integration
+        compute_physics(state); // Linear integration
     }
 
     // Linear interpolation
     let alpha = state.conf.accumulator / state.conf.step;
-    state.sub.interpolation = interpolate(alpha, state);
-}
-
-// Calculate and update physics
-pub fn physics(state: &mut State) {
-    let ax = state.sub.force.x / state.sub.mass;
-    let ay = state.sub.force.y / state.sub.mass;
-
-    let ix = state.sub.impulse.x * state.sub.direction.x;
-    let iy = state.sub.impulse.y * state.sub.direction.y;
-
-    state.sub.acceleration.x = (ax + ix) * state.conf.step;
-    state.sub.acceleration.y = (ay + iy + state.env.gravity) * state.conf.step;
-
-    state.sub.velocity.x += state.sub.acceleration.x * state.conf.ratio;
-    state.sub.velocity.y += state.sub.acceleration.y * state.conf.ratio;
-
-    let [dx, dy, cx, cy] = collision(state);
-
-    state.sub.velocity.x = if cx.abs() < 1.0 { dx } else { 0.0 };
-    state.sub.velocity.y = if cy.abs() < 1.0 { dy } else { 0.0 };
-
-    state.sub.velocity.x *= state.env.dissipation.x;
-    state.sub.velocity.y *= state.env.dissipation.y;
-
-    if cx != 0.0 {
-        state.sub.velocity.y *= state.env.friction;
-    } else if cy != 0.0 {
-        state.sub.velocity.x *= state.env.friction;
-    } else {
-        state.sub.velocity.x *= state.env.resistance;
-        state.sub.velocity.y *= state.env.resistance;
-    }
-
-    state.sub.x += dx;
-    state.sub.y += dy;
-
-    state.env.x = state.sub.x + state.sub.width / 2.0 - state.conf.width / 2.0;
-    state.env.y = state.sub.y + state.sub.height / 2.0 - state.conf.height / 2.0;
-
-    jump(cy, state);
-
-    animation(state, dx, dy);
-
-    constrain(state);
+    state.sub.interpolation = interpolate_coordinates(alpha, state);
 }
 
 // Render graphics
-pub fn render(state: &mut State, buffer: &mut [u8], width: u32, height: u32) {
+pub fn render_graphics(state: &mut State, buffer: &mut [u8], width: u32, height: u32) {
     let message = |id: u32| format!("Texture with id '{}' should exist", id);
 
     let x = state.sub.interpolation.x - state.env.x;
@@ -90,7 +46,7 @@ pub fn render(state: &mut State, buffer: &mut [u8], width: u32, height: u32) {
         let x = tile.position.x - state.env.x;
         let y = tile.position.y - state.env.y;
 
-        if bounds(&tile.boundary, &state.view()) {
+        if exceeds_viewport(&tile.boundary, &state.view()) {
             continue;
         }
 
@@ -113,8 +69,52 @@ pub fn render(state: &mut State, buffer: &mut [u8], width: u32, height: u32) {
     canvas::image::render(buffer, width, height, frame);
 }
 
+// Calculate and update physics
+pub fn compute_physics(state: &mut State) {
+    let ax = state.sub.force.x / state.sub.mass;
+    let ay = state.sub.force.y / state.sub.mass;
+
+    let ix = state.sub.impulse.x * state.sub.direction.x;
+    let iy = state.sub.impulse.y * state.sub.direction.y;
+
+    state.sub.acceleration.x = (ax + ix) * state.conf.step;
+    state.sub.acceleration.y = (ay + iy + state.env.gravity) * state.conf.step;
+
+    state.sub.velocity.x += state.sub.acceleration.x * state.conf.ratio;
+    state.sub.velocity.y += state.sub.acceleration.y * state.conf.ratio;
+
+    let [dx, dy, cx, cy] = collision_delta(state);
+
+    state.sub.velocity.x = if cx.abs() < 1.0 { dx } else { 0.0 };
+    state.sub.velocity.y = if cy.abs() < 1.0 { dy } else { 0.0 };
+
+    state.sub.velocity.x *= state.env.dissipation.x;
+    state.sub.velocity.y *= state.env.dissipation.y;
+
+    if cx != 0.0 {
+        state.sub.velocity.y *= state.env.friction;
+    } else if cy != 0.0 {
+        state.sub.velocity.x *= state.env.friction;
+    } else {
+        state.sub.velocity.x *= state.env.resistance;
+        state.sub.velocity.y *= state.env.resistance;
+    }
+
+    state.sub.x += dx;
+    state.sub.y += dy;
+
+    state.env.x = state.sub.x + state.sub.width / 2.0 - state.conf.width / 2.0;
+    state.env.y = state.sub.y + state.sub.height / 2.0 - state.conf.height / 2.0;
+
+    jump_player(cy, state);
+
+    update_animation(state, dx, dy);
+
+    constrain_map(state);
+}
+
 // Generate and render background pattern
-pub fn background(state: &State, buffer: &mut [u8], width: u32, height: u32) {
+pub fn generate_background(state: &State, buffer: &mut [u8], width: u32, height: u32) {
     let mut pattern = state.env.pattern.clone();
 
     let sx = state.env.x as i32;
@@ -144,15 +144,15 @@ pub fn background(state: &State, buffer: &mut [u8], width: u32, height: u32) {
 }
 
 // Check if objects intersect
-pub fn intersection(a: &Rectangle, b: &Rectangle) -> bool {
+pub fn detect_intersection(a: &Rectangle, b: &Rectangle) -> bool {
     return a.x < b.x + b.width
         && b.x < a.x + a.width
         && a.y < b.y + b.height
         && b.y < a.y + a.height;
 }
 
-// Handle collision detection
-pub fn collision(state: &State) -> [f32; 4] {
+// Get collision delta
+pub fn collision_delta(state: &State) -> [f32; 4] {
     let mut cx = 0.0;
     let mut cy = 0.0;
     let mut dx = state.sub.velocity.x;
@@ -177,11 +177,11 @@ pub fn collision(state: &State) -> [f32; 4] {
     for tile in state.env.tiles.iter() {
         let rectangle = tile.boundary;
 
-        if bounds(&rectangle, &state.view()) {
+        if exceeds_viewport(&rectangle, &state.view()) {
             continue;
         }
 
-        if intersection(&rectangle, horizontal) {
+        if detect_intersection(&rectangle, horizontal) {
             if dx < 0.0 {
                 dx = rectangle.x + rectangle.width - subject.x;
             } else if dx > 0.0 {
@@ -189,7 +189,8 @@ pub fn collision(state: &State) -> [f32; 4] {
             }
             cx = state.sub.velocity.x - dx;
         }
-        if intersection(&rectangle, vertical) {
+
+        if detect_intersection(&rectangle, vertical) {
             if dy < 0.0 {
                 dy = rectangle.y + rectangle.height - subject.y;
             } else if dy > 0.0 {
@@ -204,7 +205,7 @@ pub fn collision(state: &State) -> [f32; 4] {
 }
 
 // Interpolate subject position
-pub fn interpolate(alpha: f32, state: &mut State) -> Point {
+pub fn interpolate_coordinates(alpha: f32, state: &mut State) -> Point {
     let x = state.sub.previous.x * alpha + state.sub.x * (1.0 - alpha);
     let y = state.sub.previous.y * alpha + state.sub.y * (1.0 - alpha);
 
@@ -215,7 +216,7 @@ pub fn interpolate(alpha: f32, state: &mut State) -> Point {
 }
 
 // Constrain level to viewport
-pub fn constrain(state: &mut State) {
+pub fn constrain_map(state: &mut State) {
     if state.env.x < 0.0 {
         state.env.x = 0.0;
     }
@@ -234,7 +235,7 @@ pub fn constrain(state: &mut State) {
 }
 
 // Check if object clips viewport
-pub fn bounds(object: &Rectangle, view: &Rectangle) -> bool {
+pub fn exceeds_viewport(object: &Rectangle, view: &Rectangle) -> bool {
     if object.x as i32 > (view.x + view.width) as i32 {
         return true;
     }
@@ -255,26 +256,29 @@ pub fn bounds(object: &Rectangle, view: &Rectangle) -> bool {
 }
 
 // Update subject direction
-pub fn direction(state: &mut State) {
+pub fn update_direction(state: &mut State) {
     state.sub.direction.x = 0.0;
     state.sub.direction.y = 0.0;
 
     if state.conf.left && !state.conf.right {
         state.sub.direction.x = -1.0;
     }
+
     if state.conf.right && !state.conf.left {
         state.sub.direction.x = 1.0;
     }
+
     if state.conf.up && !state.conf.down {
         state.sub.direction.y = -1.0;
     }
+
     if state.conf.down && !state.conf.up {
         state.sub.direction.y = 1.0;
     }
 }
 
 // Player jump logic
-pub fn jump(overlap: f32, state: &mut State) {
+pub fn jump_player(overlap: f32, state: &mut State) {
     state.sub.contact = false;
 
     if state.conf.jump && !state.sub.lock && overlap > 0.0 {
@@ -292,7 +296,7 @@ pub fn jump(overlap: f32, state: &mut State) {
 }
 
 // Set player animation
-pub fn animation(state: &mut State, dx: f32, dy: f32) {
+pub fn update_animation(state: &mut State, dx: f32, dy: f32) {
     let kr = state.conf.right; // Key right
     let kl = state.conf.left; // Key left
     let ku = state.conf.up; // Key up

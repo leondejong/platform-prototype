@@ -20,13 +20,13 @@ pub trait Graphics {
 pub struct WindowConfiguration {
     pub width: u32,
     pub height: u32,
-    pub scale: u32,
+    pub scale: f32,
     pub resizable: bool,
     pub title: String,
 }
 
 impl WindowConfiguration {
-    pub fn new(width: u32, height: u32, scale: u32, resizable: bool, title: String) -> Self {
+    pub fn new(width: u32, height: u32, scale: f32, resizable: bool, title: String) -> Self {
         Self {
             width,
             height,
@@ -101,7 +101,7 @@ impl<'a> WindowState<'a> {
 pub fn run(
     width: u32,
     height: u32,
-    scale: u32,
+    scale: f32,
     resizable: bool,
     title: String,
     state: impl Graphics + 'static,
@@ -127,8 +127,8 @@ impl<'a> ApplicationHandler for WindowState<'a> {
                             .with_title(self.config.title.clone())
                             .with_resizable(self.config.resizable)
                             .with_inner_size(Size::Logical(LogicalSize::new(
-                                (self.config.width * self.config.scale) as f64,
-                                (self.config.height * self.config.scale) as f64,
+                                self.config.scale as f64 * self.config.width as f64,
+                                self.config.scale as f64 * self.config.height as f64,
                             ))),
                     )
                     .expect("Window should be created by event loop"),

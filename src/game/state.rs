@@ -16,7 +16,7 @@ use super::data::{ENV_HEIGHT, ENV_WIDTH, ENV_X, ENV_Y, TILE_HEIGHT, TILE_WIDTH};
 use super::data::{FPS, HEIGHT, MAX, RATIO, STEP, TITLE, WIDTH};
 use super::data::{PATTERN, SPRITE_X, SPRITE_Y, SUB_HEIGHT, SUB_WIDTH, SUB_X, SUB_Y};
 
-use super::logic::{render, update};
+use super::logic::{render_graphics, update_state};
 
 // State setup
 #[derive(Default)]
@@ -220,9 +220,9 @@ impl Graphics for State {
         }
     }
     fn update(&mut self, time: f32, delta: f32, fps: f32) {
-        update(self, time, delta, fps);
+        update_state(self, time, delta, fps);
     }
     fn render(&mut self, buffer: &mut [u8], width: u32, height: u32) {
-        render(self, buffer, width, height);
+        render_graphics(self, buffer, width, height);
     }
 }

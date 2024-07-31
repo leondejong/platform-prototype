@@ -7,8 +7,8 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-bytemuck = { version = "1.16.1", features = ["derive"] }
-image = "0.25.1"
+bytemuck = { version = "1.16.3", features = ["derive"] }
+image = "0.25.2"
 pollster = "0.3.0"
-wgpu = "0.20.1"
-winit = { version = "0.30.3", features = ["rwh_06"] }
+wgpu = "22.0.0"
+winit = { version = "0.30.4", features = ["rwh_06"] }
