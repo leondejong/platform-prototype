@@ -7,6 +7,7 @@ use crate::graphics::image::Image;
 pub const WIDTH: u32 = 384;
 pub const HEIGHT: u32 = 288;
 pub const RESIZABLE: bool = false;
+pub const FILTER: bool = false;
 pub const SCALE: f32 = 1.0;
 pub const TITLE: &str = "Platform Game";
 

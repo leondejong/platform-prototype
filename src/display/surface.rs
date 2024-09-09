@@ -162,7 +162,22 @@ impl<'a> SurfaceState<'a> {
 
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
+        let mut filter_mode = wgpu::FilterMode::Nearest;
+
+        if config.filter {
+            filter_mode = wgpu::FilterMode::Linear;
+        }
+
+        let sampler_descriptor = &wgpu::SamplerDescriptor {
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
+            mipmap_filter: filter_mode,
+            ..Default::default()
+        };
+
+        // let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
+
+        let sampler = device.create_sampler(&sampler_descriptor);
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[

@@ -61,6 +61,7 @@ pub fn render_graphics(state: &mut State, buffer: &mut [u8], width: u32, height:
 
         canvas::image::render(buffer, width, height, image);
     }
+
     let frame_x = x + state.sub.offset.x;
     let frame_y = y + state.sub.offset.y;
 

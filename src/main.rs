@@ -1,9 +1,9 @@
 use platform_prototype::display::run;
 
-use platform_prototype::game::data::{HEIGHT, RESIZABLE, SCALE, TITLE, WIDTH};
+use platform_prototype::game::data::{FILTER, HEIGHT, RESIZABLE, SCALE, TITLE, WIDTH};
 use platform_prototype::game::state::State;
 
 fn main() {
-    let state = State::new();
-    run(WIDTH, HEIGHT, SCALE, RESIZABLE, TITLE.into(), state);
+    let state = State::build();
+    run(WIDTH, HEIGHT, SCALE, RESIZABLE, FILTER, TITLE.into(), state);
 }

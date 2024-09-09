@@ -22,16 +22,25 @@ pub struct WindowConfiguration {
     pub height: u32,
     pub scale: f32,
     pub resizable: bool,
+    pub filter: bool,
     pub title: String,
 }
 
 impl WindowConfiguration {
-    pub fn new(width: u32, height: u32, scale: f32, resizable: bool, title: String) -> Self {
+    pub fn new(
+        width: u32,
+        height: u32,
+        scale: f32,
+        resizable: bool,
+        filter: bool,
+        title: String,
+    ) -> Self {
         Self {
             width,
             height,
             scale,
             resizable,
+            filter,
             title,
         }
     }
@@ -103,13 +112,14 @@ pub fn run(
     height: u32,
     scale: f32,
     resizable: bool,
+    filter: bool,
     title: String,
     state: impl Graphics + 'static,
 ) {
     let event_loop = EventLoop::new().expect("Window event loop should instantiate");
     event_loop.set_control_flow(ControlFlow::Poll);
     // event_loop.set_control_flow(ControlFlow::Wait);
-    let configuration = WindowConfiguration::new(width, height, scale, resizable, title);
+    let configuration = WindowConfiguration::new(width, height, scale, resizable, filter, title);
     let mut window_state = WindowState::new(configuration);
     window_state.graphics = Some(Box::new(state));
     event_loop

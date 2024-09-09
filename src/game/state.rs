@@ -90,25 +90,26 @@ pub struct Subject {
 
 impl State {
     pub fn new() -> Self {
-        let mut state = Self {
+        Self {
             conf: Configuration::new(),
             env: Environment::new(),
             sub: Subject::new(),
-        };
-
-        state.initialize();
-
+        }
+    }
+    pub fn build() -> Self {
+        let mut state = Self::new();
+        state.init();
         state
     }
-    fn initialize(&mut self) {
+    pub fn view(&self) -> Rectangle {
+        Rectangle::new(self.env.x, self.env.y, self.conf.width, self.conf.height)
+    }
+    fn init(&mut self) {
         self.sub.mass = self.sub.width * self.sub.height * self.sub.density;
         self.env.friction = (1.0 - self.env.friction).powf(self.conf.ratio);
         self.env.resistance = (1.0 - self.env.resistance).powf(self.conf.ratio);
         self.env.dissipation.x = (1.0 - self.env.dissipation.x).powf(self.conf.ratio);
         self.env.dissipation.y = (1.0 - self.env.dissipation.y).powf(self.conf.ratio);
-    }
-    pub fn view(&self) -> Rectangle {
-        Rectangle::new(self.env.x, self.env.y, self.conf.width, self.conf.height)
     }
 }
 
